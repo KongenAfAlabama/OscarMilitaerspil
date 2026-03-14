@@ -457,6 +457,8 @@
     </section>
   </main>
 
+  <audio id="bgMusic" src="/Oscar_Skyder_.mp3" preload="auto" loop playsinline></audio>
+
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
@@ -467,6 +469,7 @@
     const messageBox = document.getElementById("messageBox");
     const weaponPanel = document.getElementById("weaponPanel");
     const arena = document.querySelector(".arena");
+    const bgMusic = document.getElementById("bgMusic");
 
     const TOTAL_LEVELS = 10;
     const GRAVITY = 420;
@@ -508,7 +511,8 @@
       enemy: null,
       lastTime: 0,
       aiCooldown: 0,
-      tankScale: 1
+      tankScale: 1,
+      musicStarted: false
     };
 
     function getTankTier(level) {
@@ -704,10 +708,19 @@
     }
 
     function mountControls() {
+      const tryStartMusic = () => {
+        if (state.musicStarted) return;
+        bgMusic.volume = 0.35;
+        bgMusic.play().then(() => {
+          state.musicStarted = true;
+        }).catch(() => {});
+      };
+
       document.querySelectorAll("[data-action]").forEach((button) => {
         const action = button.dataset.action;
         const press = (event) => {
           event.preventDefault();
+          tryStartMusic();
           button.classList.add("active");
           holdAction(action, true);
         };
@@ -722,6 +735,7 @@
       });
 
       window.addEventListener("keydown", (event) => {
+        tryStartMusic();
         const map = {
           ArrowLeft: "left",
           ArrowRight: "right",
@@ -754,6 +768,8 @@
         const action = map[event.key] || map[event.code];
         if (action) state.controls.delete(action);
       });
+
+      window.addEventListener("pointerdown", tryStartMusic, { passive: true });
     }
 
     function fireWeapon(shooter, target, weaponId) {
@@ -799,11 +815,26 @@
       }
     }
 
+    function createHitBurst(x, y, weapon, intensity) {
+      const particleCount = Math.round(22 + intensity * 18);
+      for (let i = 0; i < particleCount; i += 1) {
+        state.particles.push({
+          x: x + (Math.random() - 0.5) * 10,
+          y: y + (Math.random() - 0.5) * 10,
+          vx: (Math.random() - 0.5) * (220 + intensity * 120),
+          vy: (Math.random() - 0.9) * (220 + intensity * 140),
+          life: 0.9 + Math.random() * 0.65,
+          size: 4 + Math.random() * (8 + intensity * 6),
+          color: Math.random() > 0.35 ? weapon.color : "#ffd7a3"
+        });
+      }
+    }
+
     function explode(projectile, x, y) {
       const weapon = weapons.find((item) => item.id === projectile.weaponId) || weapons[0];
       applyCrater(x, weapon.blast);
-      dealDamage(state.player, x, y, weapon);
-      dealDamage(state.enemy, x, y, weapon);
+      const playerHit = dealDamage(state.player, x, y, weapon);
+      const enemyHit = dealDamage(state.enemy, x, y, weapon);
       for (let i = 0; i < 24; i += 1) {
         state.particles.push({
           x,
@@ -815,17 +846,24 @@
           color: weapon.color
         });
       }
+      if (playerHit > 0) {
+        createHitBurst(state.player.x, state.player.y - state.player.height - 10, weapon, Math.min(1.8, playerHit / 22));
+      }
+      if (enemyHit > 0) {
+        createHitBurst(state.enemy.x, state.enemy.y - state.enemy.height - 10, weapon, Math.min(1.8, enemyHit / 22));
+      }
       checkRoundEnd();
     }
 
     function dealDamage(tank, x, y, weapon) {
       const tankCenterY = tank.y - tank.height - 2;
       const distance = Math.hypot(tank.x - x, tankCenterY - y);
-      if (distance > weapon.blast + 34) return;
+      if (distance > weapon.blast + 34) return 0;
       const rawDamage = weapon.damage * Math.max(0.16, 1 - distance / (weapon.blast + 34));
       const damage = rawDamage * (1 - tank.armor);
       tank.health = Math.max(0, tank.health - damage);
       updateHud();
+      return damage;
     }
 
     function checkRoundEnd() {
