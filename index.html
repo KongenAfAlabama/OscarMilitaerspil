@@ -152,6 +152,11 @@
 
     .controls-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-areas:
+        "powerDown angleUp powerUp"
+        "left fire right"
+        ". angleDown .";
+      align-items: stretch;
     }
 
     .button,
@@ -188,6 +193,34 @@
 
     .button.fire {
       background: linear-gradient(180deg, rgba(255,125,95,0.9), rgba(169,46,34,0.95));
+    }
+
+    .button.power-down { grid-area: powerDown; }
+    .button.power-up { grid-area: powerUp; }
+    .button.angle-up { grid-area: angleUp; }
+    .button.angle-down { grid-area: angleDown; }
+    .button.left { grid-area: left; }
+    .button.right { grid-area: right; }
+    .button.fire { grid-area: fire; }
+
+    .button.control {
+      min-height: 68px;
+      padding: 10px 8px;
+    }
+
+    .button.control strong {
+      font-size: 1.55rem;
+      line-height: 1;
+    }
+
+    .button.control span {
+      font-size: 0.67rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .button.fire strong {
+      font-size: 1.05rem;
     }
 
     .weapon-panel {
@@ -284,7 +317,6 @@
       }
 
       .controls-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 8px;
       }
 
@@ -307,8 +339,20 @@
       }
 
       .button.fire {
-        grid-column: 1 / -1;
         min-height: 54px;
+      }
+
+      .button.control {
+        min-height: 54px;
+        padding: 8px 6px;
+      }
+
+      .button.control strong {
+        font-size: 1.25rem;
+      }
+
+      .button.control span {
+        font-size: 0.58rem;
       }
 
       .weapon-card {
@@ -336,6 +380,14 @@
 
       .button span {
         font-size: 0.62rem;
+      }
+
+      .button.control strong {
+        font-size: 1.12rem;
+      }
+
+      .button.control span {
+        font-size: 0.54rem;
       }
     }
   </style>
@@ -371,33 +423,33 @@
 
     <section class="bottom-panel">
       <div class="controls-grid">
-        <button class="button" data-action="left">
-          <strong>Venstre</strong>
-          <span>Kør bagud</span>
+        <button class="button control power-down" data-action="powerDown">
+          <strong>-</strong>
+          <span>Kraft</span>
         </button>
-        <button class="button" data-action="right">
-          <strong>Højre</strong>
-          <span>Kør frem</span>
+        <button class="button control angle-up" data-action="angleUp">
+          <strong>↑</strong>
+          <span>Vinkel</span>
         </button>
-        <button class="button" data-action="angleUp">
-          <strong>Vinkel +</strong>
-          <span>Løft kanonen</span>
+        <button class="button control power-up" data-action="powerUp">
+          <strong>+</strong>
+          <span>Kraft</span>
         </button>
-        <button class="button" data-action="angleDown">
-          <strong>Vinkel -</strong>
-          <span>Sænk kanonen</span>
-        </button>
-        <button class="button" data-action="powerUp">
-          <strong>Kraft +</strong>
-          <span>Mere rækkevidde</span>
-        </button>
-        <button class="button" data-action="powerDown">
-          <strong>Kraft -</strong>
-          <span>Mere kontrol</span>
+        <button class="button control left" data-action="left">
+          <strong>←</strong>
+          <span>Venstre</span>
         </button>
         <button class="button fire" data-action="fire">
           <strong>Affyr</strong>
-          <span>Skyd valgt våben</span>
+          <span>Skyd</span>
+        </button>
+        <button class="button control right" data-action="right">
+          <strong>→</strong>
+          <span>Højre</span>
+        </button>
+        <button class="button control angle-down" data-action="angleDown">
+          <strong>↓</strong>
+          <span>Vinkel</span>
         </button>
       </div>
 
