@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Tank Duel</title>
+  <style>
+    :root {
+      --bg-top: #f4d8a8;
+      --bg-bottom: #d0723d;
+      --panel: rgba(34, 32, 43, 0.82);
+      --panel-soft: rgba(255, 255, 255, 0.12);
+      --accent: #ffcc66;
+      --accent-strong: #ff7a3d;
+      --ink: #fff7e7;
+      --danger: #ff5f5f;
+      --ok: #99f090;
+      --shadow: rgba(0, 0, 0, 0.28);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      overflow: hidden;
+      font-family: "Trebuchet MS", "Avenir Next", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(255,255,255,0.35), transparent 34%),
+        linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+      color: var(--ink);
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    .app {
+      width: min(100vw, 980px);
+      min-height: 100vh;
+      padding:
+        max(14px, env(safe-area-inset-top))
+        max(14px, env(safe-area-inset-right))
+        max(16px, env(safe-area-inset-bottom))
+        max(14px, env(safe-area-inset-left));
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 12px;
+    }
+
+    .topbar,
+    .bottom-panel,
+    .message {
+      background: var(--panel);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 14px 40px var(--shadow);
+      border-radius: 20px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .stat {
+      background: var(--panel-soft);
+      border-radius: 14px;
+      padding: 10px 12px;
+    }
+
+    .label {
+      display: block;
+      font-size: 0.72rem;
+      opacity: 0.78;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .value {
+      display: block;
+      font-size: clamp(1rem, 2.5vw, 1.35rem);
+      font-weight: 700;
+    }
+
+    .arena {
+      position: relative;
+      min-height: 320px;
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 18px 50px var(--shadow);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.25), transparent 55%),
+        linear-gradient(180deg, #7fc2f7 0%, #ffd39b 68%, #ce6d3f 100%);
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .message {
+      position: absolute;
+      left: 50%;
+      top: 22px;
+      transform: translateX(-50%);
+      width: min(88%, 620px);
+      padding: 14px 16px;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .message strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 1rem;
+    }
+
+    .bottom-panel {
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 12px;
+    }
+
+    .controls-grid,
+    .weapon-panel {
+      display: grid;
+      gap: 10px;
+    }
+
+    .controls-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .button,
+    .weapon-card {
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 12px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+      color: var(--ink);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
+    }
+
+    .button {
+      min-height: 74px;
+      font: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      user-select: none;
+    }
+
+    .button:active,
+    .button.active,
+    .weapon-card.active {
+      background: linear-gradient(180deg, rgba(255,204,102,0.42), rgba(255,122,61,0.34));
+      transform: translateY(1px);
+    }
+
+    .button.fire {
+      background: linear-gradient(180deg, rgba(255,125,95,0.9), rgba(169,46,34,0.95));
+    }
+
+    .weapon-panel {
+      grid-template-columns: 1fr;
+    }
+
+    .weapon-card {
+      text-align: left;
+      min-height: 74px;
+    }
+
+    .weapon-card strong,
+    .button strong {
+      display: block;
+      font-size: 1rem;
+    }
+
+    .weapon-card span,
+    .button span {
+      display: block;
+      margin-top: 4px;
+      font-size: 0.78rem;
+      opacity: 0.82;
+    }
+
+    @media (max-width: 820px) {
+      .topbar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .bottom-panel {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 540px) {
+      .app {
+        gap: 10px;
+      }
+
+      .topbar,
+      .bottom-panel,
+      .message {
+        border-radius: 18px;
+      }
+
+      .controls-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .button {
+        min-height: 68px;
+        padding: 12px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="topbar">
+      <div class="stat">
+        <span class="label">Bane</span>
+        <span class="value" id="levelValue">1 / 10</span>
+      </div>
+      <div class="stat">
+        <span class="label">Din Tank</span>
+        <span class="value" id="playerArmorValue">100 HP</span>
+      </div>
+      <div class="stat">
+        <span class="label">Fjende</span>
+        <span class="value" id="enemyArmorValue">100 HP</span>
+      </div>
+      <div class="stat">
+        <span class="label">Skud</span>
+        <span class="value" id="weaponValue">Standard</span>
+      </div>
+    </section>
+
+    <section class="arena">
+      <canvas id="gameCanvas" width="960" height="540"></canvas>
+      <div class="message" id="messageBox">
+        <strong>Tank Duel</strong>
+        <span>Tryk og hold på knapperne for at styre. Vælg våben, juster vinkel og affyr.</span>
+      </div>
+    </section>
+
+    <section class="bottom-panel">
+      <div class="controls-grid">
+        <button class="button" data-action="left">
+          <strong>Venstre</strong>
+          <span>Kør bagud</span>
+        </button>
+        <button class="button" data-action="right">
+          <strong>Højre</strong>
+          <span>Kør frem</span>
+        </button>
+        <button class="button" data-action="angleUp">
+          <strong>Vinkel +</strong>
+          <span>Løft kanonen</span>
+        </button>
+        <button class="button" data-action="angleDown">
+          <strong>Vinkel -</strong>
+          <span>Sænk kanonen</span>
+        </button>
+        <button class="button" data-action="powerUp">
+          <strong>Kraft +</strong>
+          <span>Mere rækkevidde</span>
+        </button>
+        <button class="button" data-action="powerDown">
+          <strong>Kraft -</strong>
+          <span>Mere kontrol</span>
+        </button>
+        <button class="button fire" data-action="fire">
+          <strong>Affyr</strong>
+          <span>Skyd valgt våben</span>
+        </button>
+      </div>
+
+      <div class="weapon-panel" id="weaponPanel"></div>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const levelValue = document.getElementById("levelValue");
+    const playerArmorValue = document.getElementById("playerArmorValue");
+    const enemyArmorValue = document.getElementById("enemyArmorValue");
+    const weaponValue = document.getElementById("weaponValue");
+    const messageBox = document.getElementById("messageBox");
+    const weaponPanel = document.getElementById("weaponPanel");
+    const arena = document.querySelector(".arena");
+
+    const TOTAL_LEVELS = 10;
+    const GRAVITY = 420;
+    const TERRAIN_STEP = 6;
+    const PLAYER_BASE_HEALTH = 110;
+    const PLAYER_BASE_ARMOR = 0.12;
+    const POWER_MIN = 140;
+    const POWER_MAX = 420;
+
+    const weapons = [
+      { id: "shell", name: "Standard", blast: 42, damage: 28, speed: 1, unlock: 1, color: "#ffe082", label: "Stabilt standardskud" },
+      { id: "heavy", name: "Heavy", blast: 54, damage: 40, speed: 0.9, unlock: 3, color: "#ff8a65", label: "Tyngre skud med større sprængning" },
+      { id: "cluster", name: "Cluster", blast: 30, damage: 18, speed: 1.05, unlock: 5, color: "#81d4fa", label: "Splitter i tre granater" },
+      { id: "piercer", name: "Piercer", blast: 26, damage: 58, speed: 1.15, unlock: 7, color: "#b39ddb", label: "Høj skade mod stærke tanks" },
+      { id: "nova", name: "Nova", blast: 68, damage: 44, speed: 0.95, unlock: 9, color: "#ffcc80", label: "Sen-game eksplosion med stor radius" }
+    ];
+
+    const tankTiers = [
+      { unlock: 1, name: "Scout", health: 110, armor: 0.12, move: 86 },
+      { unlock: 3, name: "Bulwark", health: 135, armor: 0.18, move: 92 },
+      { unlock: 5, name: "Siege", health: 165, armor: 0.24, move: 96 },
+      { unlock: 7, name: "Titan", health: 190, armor: 0.29, move: 102 },
+      { unlock: 9, name: "Leviathan", health: 220, armor: 0.34, move: 108 }
+    ];
+
+    const state = {
+      level: 1,
+      phase: "aim",
+      currentWeapon: "shell",
+      terrain: [],
+      terrainPeaks: [],
+      craters: [],
+      projectiles: [],
+      particles: [],
+      enemyThinkAt: 0,
+      controls: new Set(),
+      messageTimer: 0,
+      player: null,
+      enemy: null,
+      lastTime: 0,
+      aiCooldown: 0
+    };
+
+    function getTankTier(level) {
+      return tankTiers.reduce((best, tier) => (level >= tier.unlock ? tier : best), tankTiers[0]);
+    }
+
+    function getAvailableWeapons(level) {
+      return weapons.filter((weapon) => level >= weapon.unlock);
+    }
+
+    function getTerrainY(x) {
+      const clampedX = Math.max(0, Math.min(canvas.width - 1, x));
+      return state.terrain[Math.floor(clampedX)] ?? canvas.height * 0.75;
+    }
+
+    function createTank(kind, x, tint, level) {
+      const tier = getTankTier(level);
+      const profile = kind === "player"
+        ? {
+            faction: "Allieret",
+            hullColor: "#66744a",
+            hullShade: "#505d37",
+            armorColor: "#7e8e5d",
+            trackColor: "#232323",
+            metalColor: "#8a8d81",
+            markColor: "#f2f0df",
+            width: 108,
+            height: 32,
+            turretLength: 88,
+            turretPivotX: 18,
+            turretPivotY: -46,
+            casemateHeight: 34,
+            wheelCount: 6,
+            facing: 1,
+            shape: "allied"
+          }
+        : {
+            faction: "Tysk",
+            hullColor: "#907f4d",
+            hullShade: "#6e613c",
+            armorColor: "#a2915d",
+            trackColor: "#171717",
+            metalColor: "#9d9c92",
+            markColor: "#2b2b2b",
+            width: 116,
+            height: 34,
+            turretLength: 96,
+            turretPivotX: -18,
+            turretPivotY: -49,
+            casemateHeight: 40,
+            wheelCount: 8,
+            facing: -1,
+            shape: "german"
+          };
+      return {
+        kind,
+        x,
+        y: getTerrainY(x),
+        width: profile.width,
+        height: profile.height,
+        turretLength: profile.turretLength,
+        turretPivotX: profile.turretPivotX,
+        turretPivotY: profile.turretPivotY,
+        angle: kind === "player" ? -0.8 : -2.3,
+        power: kind === "player" ? 240 : 250,
+        health: tier.health,
+        maxHealth: tier.health,
+        armor: tier.armor,
+        moveSpeed: tier.move,
+        tint,
+        tier,
+        profile
+      };
+    }
+
+    function noise(x) {
+      const wave = Math.sin(x * 0.011) * 38 + Math.sin(x * 0.027 + 1.7) * 21 + Math.sin(x * 0.061 + 2.1) * 8;
+      return wave;
+    }
+
+    function buildTerrain(level) {
+      const base = canvas.height * (0.68 - level * 0.01);
+      const hills = new Array(canvas.width);
+      const peaks = [];
+      for (let x = 0; x < canvas.width; x += 1) {
+        const valley = Math.sin((x + level * 70) * 0.0045) * 26;
+        const rough = noise(x + level * 83);
+        const contour = Math.max(canvas.height * 0.34, Math.min(canvas.height * 0.88, base + rough + valley));
+        hills[x] = contour;
+      }
+
+      for (let x = 100; x <= canvas.width - 100; x += 140) {
+        peaks.push({ x, y: hills[x], r: 34 + ((x / 20 + level * 7) % 18) });
+      }
+
+      state.terrain = hills;
+      state.terrainPeaks = peaks;
+      state.craters = [];
+    }
+
+    function applyCrater(cx, radius) {
+      for (let x = Math.max(0, Math.floor(cx - radius)); x < Math.min(canvas.width, Math.ceil(cx + radius)); x += 1) {
+        const dx = x - cx;
+        const depth = Math.sqrt(Math.max(0, radius * radius - dx * dx));
+        state.terrain[x] = Math.min(canvas.height - 24, state.terrain[x] + depth * 0.42);
+      }
+      state.craters.push({ x: cx, radius, ttl: 1.6 });
+    }
+
+    function setupLevel(level) {
+      buildTerrain(level);
+      const playerX = 90 + level * 12;
+      const enemyX = canvas.width - (92 + level * 14);
+      state.player = createTank("player", playerX, "#8ee58b", level);
+      state.enemy = createTank("enemy", enemyX, "#ff8a65", Math.min(TOTAL_LEVELS, level + 1));
+      state.player.y = getTerrainY(state.player.x);
+      state.enemy.y = getTerrainY(state.enemy.x);
+      state.player.angle = -0.95 + level * 0.015;
+      state.enemy.angle = -2.18 - level * 0.018;
+      state.player.power = 230 + level * 8;
+      state.enemy.power = 220 + level * 11;
+      state.currentWeapon = getAvailableWeapons(level).slice(-1)[0].id;
+      state.projectiles = [];
+      state.particles = [];
+      state.phase = "aim";
+      state.aiCooldown = 1.4;
+      announce(level === 1 ? "Tryk og hold for at køre, sigte og affyre." : `Bane ${level} starter. Nye opgraderinger er aktive.`);
+      renderWeaponCards();
+      updateHud();
+    }
+
+    function announce(text) {
+      messageBox.innerHTML = `<strong>Tank Duel</strong><span>${text}</span>`;
+      state.messageTimer = 3.8;
+    }
+
+    function updateHud() {
+      levelValue.textContent = `${state.level} / ${TOTAL_LEVELS}`;
+      playerArmorValue.textContent = `${Math.max(0, Math.ceil(state.player.health))} HP · ${state.player.tier.name}`;
+      enemyArmorValue.textContent = `${Math.max(0, Math.ceil(state.enemy.health))} HP`;
+      const weapon = weapons.find((item) => item.id === state.currentWeapon);
+      weaponValue.textContent = weapon ? weapon.name : "Standard";
+      for (const card of weaponPanel.querySelectorAll(".weapon-card")) {
+        card.classList.toggle("active", card.dataset.weapon === state.currentWeapon);
+      }
+    }
+
+    function renderWeaponCards() {
+      const available = getAvailableWeapons(state.level);
+      weaponPanel.innerHTML = "";
+      for (const weapon of available) {
+        const button = document.createElement("button");
+        button.className = "weapon-card";
+        button.dataset.weapon = weapon.id;
+        button.innerHTML = `<strong>${weapon.name}</strong><span>${weapon.label}</span>`;
+        button.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          if (state.phase !== "aim") return;
+          state.currentWeapon = weapon.id;
+          updateHud();
+        });
+        weaponPanel.appendChild(button);
+      }
+    }
+
+    function holdAction(action, active) {
+      if (action === "fire" && active) {
+        if (state.phase === "aim") fireWeapon(state.player, state.enemy, state.currentWeapon);
+        return;
+      }
+      if (active) state.controls.add(action);
+      else state.controls.delete(action);
+    }
+
+    function mountControls() {
+      document.querySelectorAll("[data-action]").forEach((button) => {
+        const action = button.dataset.action;
+        const press = (event) => {
+          event.preventDefault();
+          button.classList.add("active");
+          holdAction(action, true);
+        };
+        const release = () => {
+          button.classList.remove("active");
+          holdAction(action, false);
+        };
+        button.addEventListener("pointerdown", press);
+        button.addEventListener("pointerup", release);
+        button.addEventListener("pointerleave", release);
+        button.addEventListener("pointercancel", release);
+      });
+
+      window.addEventListener("keydown", (event) => {
+        const map = {
+          ArrowLeft: "left",
+          ArrowRight: "right",
+          ArrowUp: "angleUp",
+          ArrowDown: "angleDown",
+          a: "powerDown",
+          d: "powerUp"
+        };
+        if (event.code === "Space") {
+          event.preventDefault();
+          holdAction("fire", true);
+          return;
+        }
+        const action = map[event.key] || map[event.code];
+        if (action) {
+          event.preventDefault();
+          state.controls.add(action);
+        }
+      });
+
+      window.addEventListener("keyup", (event) => {
+        const map = {
+          ArrowLeft: "left",
+          ArrowRight: "right",
+          ArrowUp: "angleUp",
+          ArrowDown: "angleDown",
+          a: "powerDown",
+          d: "powerUp"
+        };
+        const action = map[event.key] || map[event.code];
+        if (action) state.controls.delete(action);
+      });
+    }
+
+    function fireWeapon(shooter, target, weaponId) {
+      const weapon = weapons.find((item) => item.id === weaponId) || weapons[0];
+      const cos = Math.cos(shooter.angle);
+      const sin = Math.sin(shooter.angle);
+      const pivotX = shooter.x + shooter.turretPivotX;
+      const pivotY = shooter.y + shooter.turretPivotY;
+      const tipX = pivotX + cos * shooter.turretLength;
+      const tipY = pivotY + sin * shooter.turretLength;
+      const speed = shooter.power * weapon.speed;
+      state.projectiles.push({
+        owner: shooter.kind,
+        weaponId: weapon.id,
+        x: tipX,
+        y: tipY,
+        vx: cos * speed,
+        vy: sin * speed,
+        ttl: 9
+      });
+
+      if (weapon.id === "cluster") {
+        state.projectiles[state.projectiles.length - 1].splitAt = 0.9;
+      }
+
+      lastProjectileOwner = shooter.kind;
+      state.phase = shooter.kind === "player" ? "projectile" : "enemyProjectile";
+      state.aiCooldown = 1.4;
+      createMuzzleFlash(tipX, tipY, weapon.color);
+    }
+
+    function createMuzzleFlash(x, y, color) {
+      for (let i = 0; i < 10; i += 1) {
+        state.particles.push({
+          x,
+          y,
+          vx: (Math.random() - 0.5) * 140,
+          vy: (Math.random() - 0.5) * 140,
+          life: 0.55 + Math.random() * 0.25,
+          size: 2 + Math.random() * 5,
+          color
+        });
+      }
+    }
+
+    function explode(projectile, x, y) {
+      const weapon = weapons.find((item) => item.id === projectile.weaponId) || weapons[0];
+      applyCrater(x, weapon.blast);
+      dealDamage(state.player, x, y, weapon);
+      dealDamage(state.enemy, x, y, weapon);
+      for (let i = 0; i < 24; i += 1) {
+        state.particles.push({
+          x,
+          y,
+          vx: (Math.random() - 0.5) * 180,
+          vy: (Math.random() - 1.05) * 180,
+          life: 0.8 + Math.random() * 0.5,
+          size: 3 + Math.random() * 6,
+          color: weapon.color
+        });
+      }
+      checkRoundEnd();
+    }
+
+    function dealDamage(tank, x, y, weapon) {
+      const tankCenterY = tank.y - tank.height - 2;
+      const distance = Math.hypot(tank.x - x, tankCenterY - y);
+      if (distance > weapon.blast + 34) return;
+      const rawDamage = weapon.damage * Math.max(0.16, 1 - distance / (weapon.blast + 34));
+      const damage = rawDamage * (1 - tank.armor);
+      tank.health = Math.max(0, tank.health - damage);
+      updateHud();
+    }
+
+    function checkRoundEnd() {
+      if (state.player.health <= 0 && state.enemy.health <= 0) {
+        announce("Begge tanks gik ned. Banen genstartes.");
+        state.phase = "resetting";
+        window.setTimeout(() => setupLevel(state.level), 1700);
+        return;
+      }
+
+      if (state.enemy.health <= 0) {
+        if (state.level >= TOTAL_LEVELS) {
+          announce("Du klarede alle 10 baner. Tap for at starte forfra med fulde upgrades.");
+          state.phase = "victory";
+          arena.addEventListener("pointerdown", restartFromScratch, { once: true });
+        } else {
+          state.level += 1;
+          state.phase = "resetting";
+          window.setTimeout(() => setupLevel(state.level), 1800);
+        }
+        return;
+      }
+
+      if (state.player.health <= 0) {
+        announce("Din tank blev ødelagt. Bane genstartes.");
+        state.phase = "resetting";
+        window.setTimeout(() => setupLevel(state.level), 1800);
+        return;
+      }
+
+      if (!state.projectiles.length) {
+        state.phase = projectileOwnedByPlayerLast() ? "enemyAim" : "aim";
+      }
+    }
+
+    let lastProjectileOwner = "player";
+    function projectileOwnedByPlayerLast() {
+      return lastProjectileOwner === "player";
+    }
+
+    function restartFromScratch(event) {
+      event.preventDefault();
+      state.level = 1;
+      setupLevel(1);
+    }
+
+    function updatePlayer(dt) {
+      if (state.phase !== "aim") return;
+      const player = state.player;
+      const moveDir = (state.controls.has("right") ? 1 : 0) - (state.controls.has("left") ? 1 : 0);
+      if (moveDir !== 0) {
+        player.x = Math.max(40, Math.min(canvas.width - 40, player.x + moveDir * player.moveSpeed * dt));
+        player.y = getTerrainY(player.x);
+      }
+
+      if (state.controls.has("angleUp")) player.angle = Math.max(-1.45, player.angle - 1.25 * dt);
+      if (state.controls.has("angleDown")) player.angle = Math.min(-0.15, player.angle + 1.25 * dt);
+      if (state.controls.has("powerUp")) player.power = Math.min(POWER_MAX, player.power + 140 * dt);
+      if (state.controls.has("powerDown")) player.power = Math.max(POWER_MIN, player.power - 140 * dt);
+    }
+
+    function updateEnemyAI(dt) {
+      if (state.phase !== "enemyAim") return;
+      state.aiCooldown -= dt;
+      if (state.aiCooldown > 0) return;
+
+      const enemy = state.enemy;
+      const dx = state.player.x - enemy.x;
+      const dy = (state.player.y - state.player.height) - (enemy.y - enemy.height);
+      const gravity = GRAVITY;
+      let best = null;
+      const available = getAvailableWeapons(Math.min(TOTAL_LEVELS, state.level + 1));
+      for (const weapon of available) {
+        for (let power = 180; power <= 420; power += 16) {
+          const v = power * weapon.speed;
+          const root = v ** 4 - gravity * (gravity * dx * dx + 2 * dy * v * v);
+          if (root <= 0) continue;
+          const sqrt = Math.sqrt(root);
+          const signDx = Math.sign(dx) || -1;
+          const candidates = [
+            Math.atan((v * v + sqrt) / (gravity * Math.abs(dx))),
+            Math.atan((v * v - sqrt) / (gravity * Math.abs(dx)))
+          ];
+          for (const baseAngle of candidates) {
+            const shotAngle = Math.PI - baseAngle;
+            const score = Math.abs(power - enemy.power) + Math.abs(shotAngle - enemy.angle) * 90 + (weapon.unlock * 5);
+            if (!best || score < best.score) {
+              best = { angle: shotAngle, power, weaponId: weapon.id, score };
+            }
+          }
+        }
+      }
+
+      if (!best) {
+        best = {
+          angle: -2.4 + Math.random() * 0.6,
+          power: 230 + Math.random() * 80,
+          weaponId: available[Math.floor(Math.random() * available.length)].id
+        };
+      }
+
+      enemy.angle += (best.angle - enemy.angle) * 0.9;
+      enemy.power += (best.power - enemy.power) * 0.9;
+      lastProjectileOwner = "enemy";
+      fireWeapon(enemy, state.player, best.weaponId);
+    }
+
+    function updateProjectiles(dt) {
+      const next = [];
+      for (const projectile of state.projectiles) {
+        projectile.ttl -= dt;
+        projectile.x += projectile.vx * dt;
+        projectile.y += projectile.vy * dt;
+        projectile.vy += GRAVITY * dt;
+
+        if (projectile.splitAt) {
+          projectile.splitAt -= dt;
+          if (projectile.splitAt <= 0) {
+            for (const spread of [-0.22, 0, 0.22]) {
+              next.push({
+                owner: projectile.owner,
+                weaponId: "shell",
+                x: projectile.x,
+                y: projectile.y,
+                vx: projectile.vx + spread * 90,
+                vy: projectile.vy - 60,
+                ttl: 1.8
+              });
+            }
+            explode(projectile, projectile.x, projectile.y);
+            continue;
+          }
+        }
+
+        if (projectile.x < 0 || projectile.x >= canvas.width || projectile.y > canvas.height || projectile.ttl <= 0) {
+          explode(projectile, Math.max(0, Math.min(canvas.width - 1, projectile.x)), Math.min(canvas.height - 1, projectile.y));
+          continue;
+        }
+
+        if (projectile.y >= getTerrainY(projectile.x)) {
+          explode(projectile, projectile.x, getTerrainY(projectile.x));
+          continue;
+        }
+
+        next.push(projectile);
+      }
+      state.projectiles = next;
+      if (!state.projectiles.length && (state.phase === "projectile" || state.phase === "enemyProjectile")) {
+        state.phase = projectileOwnedByPlayerLast() ? "enemyAim" : "aim";
+      }
+    }
+
+    function updateParticles(dt) {
+      state.particles = state.particles.filter((particle) => {
+        particle.life -= dt;
+        particle.x += particle.vx * dt;
+        particle.y += particle.vy * dt;
+        particle.vy += 180 * dt;
+        return particle.life > 0;
+      });
+      state.craters = state.craters.filter((crater) => {
+        crater.ttl -= dt;
+        return crater.ttl > 0;
+      });
+    }
+
+    function resizeCanvas() {
+      const rect = arena.getBoundingClientRect();
+      canvas.width = Math.floor(rect.width);
+      canvas.height = Math.floor(rect.height);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      canvas.style.width = `${rect.width}px`;
+      canvas.style.height = `${rect.height}px`;
+      if (state.level) setupLevel(state.level);
+    }
+
+    function drawSky(width, height) {
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, "#84c7ff");
+      gradient.addColorStop(0.6, "#ffd8a8");
+      gradient.addColorStop(1, "#c56133");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.fillStyle = "rgba(255,255,255,0.28)";
+      ctx.beginPath();
+      ctx.arc(width * 0.8, height * 0.18, 34, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawTerrain(width, height) {
+      ctx.fillStyle = "#7b4326";
+      ctx.beginPath();
+      ctx.moveTo(0, height);
+      for (let x = 0; x < width; x += TERRAIN_STEP) {
+        ctx.lineTo(x, getTerrainY(x));
+      }
+      ctx.lineTo(width, height);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#9c5b33";
+      for (const peak of state.terrainPeaks) {
+        ctx.beginPath();
+        ctx.arc(peak.x, peak.y + 10, peak.r, Math.PI, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawTank(tank) {
+      const baseY = tank.y - tank.height;
+      const profile = tank.profile;
+      const half = tank.width / 2;
+      const scale = tank.width / 108;
+      ctx.save();
+      ctx.translate(tank.x, baseY);
+      ctx.scale(profile.facing, 1);
+      ctx.strokeStyle = "rgba(16, 16, 14, 0.9)";
+      ctx.lineWidth = 2;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+
+      const drawTracks = () => {
+        ctx.fillStyle = profile.trackColor;
+        ctx.beginPath();
+        ctx.moveTo(-half + 4 * scale, 1 * scale);
+        ctx.lineTo(-half + 14 * scale, 13 * scale);
+        ctx.lineTo(half - 10 * scale, 13 * scale);
+        ctx.quadraticCurveTo(half + 6 * scale, 10 * scale, half + 7 * scale, 0);
+        ctx.quadraticCurveTo(half + 2 * scale, -10 * scale, half - 16 * scale, -11 * scale);
+        ctx.lineTo(-half + 14 * scale, -12 * scale);
+        ctx.quadraticCurveTo(-half - 4 * scale, -11 * scale, -half + 4 * scale, 1 * scale);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#313131";
+        ctx.fillRect(-half + 12 * scale, -8 * scale, tank.width - 28 * scale, 6 * scale);
+
+        const startX = -half + 18 * scale;
+        const span = tank.width - 36 * scale;
+        const wheelRadius = profile.shape === "german" ? 7.2 * scale : 7.8 * scale;
+        for (let i = 0; i < profile.wheelCount; i += 1) {
+          const x = startX + (span / Math.max(1, profile.wheelCount - 1)) * i;
+          ctx.fillStyle = "#1f1f1f";
+          ctx.beginPath();
+          ctx.arc(x, 3 * scale, wheelRadius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = profile.metalColor;
+          ctx.beginPath();
+          ctx.arc(x, 3 * scale, wheelRadius * 0.56, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#444";
+          ctx.beginPath();
+          ctx.arc(x, 3 * scale, wheelRadius * 0.18, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      };
+
+      const drawAlliedHull = () => {
+        ctx.fillStyle = profile.hullShade;
+        ctx.beginPath();
+        ctx.moveTo(-half + 2 * scale, -10 * scale);
+        ctx.lineTo(-half + 24 * scale, -22 * scale);
+        ctx.lineTo(half - 8 * scale, -20 * scale);
+        ctx.lineTo(half + 8 * scale, -8 * scale);
+        ctx.lineTo(half - 2 * scale, -2 * scale);
+        ctx.lineTo(-half + 8 * scale, -2 * scale);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = profile.hullColor;
+        ctx.beginPath();
+        ctx.moveTo(-half + 8 * scale, -38 * scale);
+        ctx.lineTo(-half + 18 * scale, -54 * scale);
+        ctx.lineTo(-half + 54 * scale, -54 * scale);
+        ctx.lineTo(-half + 63 * scale, -44 * scale);
+        ctx.lineTo(-half + 63 * scale, -10 * scale);
+        ctx.lineTo(-half + 6 * scale, -10 * scale);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = profile.armorColor;
+        ctx.fillRect(-half + 12 * scale, -49 * scale, 24 * scale, 7 * scale);
+        ctx.fillRect(-half + 18 * scale, -31 * scale, 24 * scale, 15 * scale);
+        ctx.strokeRect(-half + 18 * scale, -31 * scale, 24 * scale, 15 * scale);
+
+        ctx.fillStyle = "rgba(255,255,255,0.09)";
+        ctx.fillRect(-half + 10 * scale, -52 * scale, 40 * scale, 4 * scale);
+      };
+
+      const drawGermanHull = () => {
+        ctx.fillStyle = profile.hullShade;
+        ctx.beginPath();
+        ctx.moveTo(-half + 8 * scale, -8 * scale);
+        ctx.lineTo(-half + 22 * scale, -23 * scale);
+        ctx.lineTo(half - 12 * scale, -19 * scale);
+        ctx.lineTo(half + 6 * scale, -8 * scale);
+        ctx.lineTo(half + 1 * scale, -2 * scale);
+        ctx.lineTo(-half + 4 * scale, -2 * scale);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = profile.hullColor;
+        ctx.beginPath();
+        ctx.moveTo(-half + 10 * scale, -44 * scale);
+        ctx.lineTo(-half + 24 * scale, -56 * scale);
+        ctx.lineTo(half - 18 * scale, -56 * scale);
+        ctx.lineTo(half - 3 * scale, -46 * scale);
+        ctx.lineTo(half + 1 * scale, -12 * scale);
+        ctx.lineTo(-half + 8 * scale, -12 * scale);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = profile.armorColor;
+        ctx.fillRect(-half + 18 * scale, -46 * scale, 30 * scale, 18 * scale);
+        ctx.strokeRect(-half + 18 * scale, -46 * scale, 30 * scale, 18 * scale);
+        ctx.fillRect(half - 28 * scale, -24 * scale, 13 * scale, 8 * scale);
+        ctx.strokeRect(half - 28 * scale, -24 * scale, 13 * scale, 8 * scale);
+
+        ctx.fillStyle = "rgba(255,255,255,0.08)";
+        ctx.fillRect(-half + 12 * scale, -54 * scale, 58 * scale, 4 * scale);
+      };
+
+      drawTracks();
+      if (profile.shape === "allied") drawAlliedHull();
+      else drawGermanHull();
+
+      ctx.fillStyle = profile.markColor;
+      if (profile.shape === "allied") {
+        ctx.beginPath();
+        ctx.moveTo(-half + 66 * scale, -18 * scale);
+        ctx.lineTo(-half + 70 * scale, -6 * scale);
+        ctx.lineTo(-half + 82 * scale, -6 * scale);
+        ctx.lineTo(-half + 72 * scale, 2 * scale);
+        ctx.lineTo(-half + 76 * scale, 14 * scale);
+        ctx.lineTo(-half + 66 * scale, 6 * scale);
+        ctx.lineTo(-half + 56 * scale, 14 * scale);
+        ctx.lineTo(-half + 60 * scale, 2 * scale);
+        ctx.lineTo(-half + 50 * scale, -6 * scale);
+        ctx.lineTo(-half + 62 * scale, -6 * scale);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.fillRect(-half + 18 * scale, -24 * scale, 18 * scale, 4 * scale);
+        ctx.fillRect(-half + 25 * scale, -31 * scale, 4 * scale, 18 * scale);
+      }
+
+      ctx.save();
+      ctx.translate(tank.turretPivotX, tank.turretPivotY);
+      ctx.rotate(tank.angle);
+      ctx.fillStyle = profile.hullColor;
+      ctx.fillRect(0, -4.2 * scale, tank.turretLength, 8.4 * scale);
+      ctx.strokeRect(0, -4.2 * scale, tank.turretLength, 8.4 * scale);
+      ctx.fillStyle = profile.hullShade;
+      ctx.fillRect(tank.turretLength - 12 * scale, -5.4 * scale, 14 * scale, 10.8 * scale);
+      ctx.strokeRect(tank.turretLength - 12 * scale, -5.4 * scale, 14 * scale, 10.8 * scale);
+      ctx.fillStyle = "rgba(255,255,255,0.1)";
+      ctx.fillRect(5 * scale, -3.2 * scale, tank.turretLength - 14 * scale, 1.7 * scale);
+      ctx.restore();
+
+      ctx.fillStyle = profile.hullShade;
+      if (profile.shape === "allied") {
+        ctx.fillRect(-half + 42 * scale, -58 * scale, 14 * scale, 4 * scale);
+        ctx.fillRect(-half + 46 * scale, -54 * scale, 2 * scale, 11 * scale);
+      } else {
+        ctx.fillRect(-half + 42 * scale, -60 * scale, 12 * scale, 4 * scale);
+        ctx.fillRect(-half + 46 * scale, -56 * scale, 2 * scale, 10 * scale);
+      }
+      ctx.restore();
+
+      const hpRatio = tank.health / tank.maxHealth;
+      ctx.fillStyle = "rgba(0,0,0,0.32)";
+      ctx.fillRect(tank.x - 30, baseY - 28, 60, 8);
+      ctx.fillStyle = hpRatio > 0.4 ? "#9cf18a" : "#ff8c76";
+      ctx.fillRect(tank.x - 30, baseY - 28, 60 * hpRatio, 8);
+    }
+
+    function drawProjectiles() {
+      for (const projectile of state.projectiles) {
+        const weapon = weapons.find((item) => item.id === projectile.weaponId) || weapons[0];
+        ctx.fillStyle = weapon.color;
+        ctx.beginPath();
+        ctx.arc(projectile.x, projectile.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawParticles() {
+      for (const particle of state.particles) {
+        ctx.globalAlpha = Math.max(0, particle.life);
+        ctx.fillStyle = particle.color;
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawAimAssist() {
+      if (state.phase !== "aim") return;
+      const player = state.player;
+      const weapon = weapons.find((item) => item.id === state.currentWeapon) || weapons[0];
+      const speed = player.power * weapon.speed;
+      let x = player.x + player.turretPivotX + Math.cos(player.angle) * player.turretLength;
+      let y = player.y + player.turretPivotY + Math.sin(player.angle) * player.turretLength;
+      let vx = Math.cos(player.angle) * speed;
+      let vy = Math.sin(player.angle) * speed;
+
+      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      for (let i = 0; i < 22; i += 1) {
+        x += vx * 0.07;
+        y += vy * 0.07;
+        vy += GRAVITY * 0.07;
+        if (y >= getTerrainY(x)) break;
+        ctx.beginPath();
+        ctx.arc(x, y, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawPowerGauge() {
+      const panelWidth = 180;
+      const x = 20;
+      const y = 20;
+      const ratio = (state.player.power - POWER_MIN) / (POWER_MAX - POWER_MIN);
+      ctx.fillStyle = "rgba(26,22,32,0.52)";
+      ctx.fillRect(x, y, panelWidth, 16);
+      ctx.fillStyle = "#ffcb73";
+      ctx.fillRect(x, y, panelWidth * ratio, 16);
+      ctx.strokeStyle = "rgba(255,255,255,0.4)";
+      ctx.strokeRect(x, y, panelWidth, 16);
+      ctx.fillStyle = "#fff6e9";
+      ctx.font = "bold 14px Trebuchet MS";
+      ctx.fillText(`Kraft ${Math.round(state.player.power)}`, x, y + 34);
+      ctx.fillText(`Vinkel ${Math.round((-state.player.angle * 180) / Math.PI)}°`, x, y + 54);
+    }
+
+    function update(dt) {
+      if (state.messageTimer > 0) {
+        state.messageTimer -= dt;
+        messageBox.style.opacity = String(Math.min(1, state.messageTimer / 0.4));
+      } else {
+        messageBox.style.opacity = "0";
+      }
+
+      state.player.y = getTerrainY(state.player.x);
+      state.enemy.y = getTerrainY(state.enemy.x);
+      updatePlayer(dt);
+      updateEnemyAI(dt);
+      updateProjectiles(dt);
+      updateParticles(dt);
+    }
+
+    function render() {
+      const width = arena.clientWidth;
+      const height = arena.clientHeight;
+      drawSky(width, height);
+      drawTerrain(width, height);
+      drawAimAssist();
+      drawTank(state.player);
+      drawTank(state.enemy);
+      drawProjectiles();
+      drawParticles();
+      drawPowerGauge();
+    }
+
+    function frame(timestamp) {
+      if (!state.lastTime) state.lastTime = timestamp;
+      const dt = Math.min(0.033, (timestamp - state.lastTime) / 1000);
+      state.lastTime = timestamp;
+      update(dt);
+      render();
+      requestAnimationFrame(frame);
+    }
+
+    window.addEventListener("resize", resizeCanvas);
+    mountControls();
+    resizeCanvas();
+    setupLevel(1);
+    requestAnimationFrame(frame);
+
+    lastProjectileOwner = "player";
+  </script>
+</body>
+</html>
