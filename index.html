@@ -47,6 +47,8 @@
       display: flex;
       justify-content: center;
       align-items: stretch;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
     .app {
@@ -102,7 +104,8 @@
 
     .arena {
       position: relative;
-      min-height: 320px;
+      min-height: clamp(300px, 42vh, 520px);
+      aspect-ratio: 16 / 10;
       border-radius: 28px;
       overflow: hidden;
       box-shadow: 0 18px 50px var(--shadow);
@@ -162,12 +165,14 @@
     }
 
     .button {
-      min-height: 74px;
+      min-height: 72px;
       font: inherit;
       font-size: 0.95rem;
       font-weight: 700;
       letter-spacing: 0.01em;
       display: flex;
+      flex-direction: column;
+      gap: 4px;
       align-items: center;
       justify-content: center;
       text-align: center;
@@ -198,13 +203,15 @@
     .button strong {
       display: block;
       font-size: 1rem;
+      line-height: 1.05;
     }
 
     .weapon-card span,
     .button span {
       display: block;
-      margin-top: 4px;
-      font-size: 0.78rem;
+      margin-top: 0;
+      font-size: 0.76rem;
+      line-height: 1.2;
       opacity: 0.82;
     }
 
@@ -220,7 +227,12 @@
 
     @media (max-width: 540px) {
       .app {
-        gap: 10px;
+        gap: 9px;
+        padding:
+          max(10px, env(safe-area-inset-top))
+          max(10px, env(safe-area-inset-right))
+          max(12px, env(safe-area-inset-bottom))
+          max(10px, env(safe-area-inset-left));
       }
 
       .topbar,
@@ -229,13 +241,101 @@
         border-radius: 18px;
       }
 
+      .topbar {
+        gap: 8px;
+        padding: 10px;
+      }
+
+      .stat {
+        padding: 9px 10px;
+      }
+
+      .label {
+        font-size: 0.66rem;
+        margin-bottom: 4px;
+      }
+
+      .value {
+        font-size: 0.92rem;
+      }
+
+      .arena {
+        min-height: 0;
+        aspect-ratio: 11 / 9;
+        border-radius: 24px;
+      }
+
+      .message {
+        top: 12px;
+        padding: 10px 12px;
+      }
+
+      .message strong {
+        font-size: 0.9rem;
+      }
+
+      .message span {
+        font-size: 0.74rem;
+      }
+
+      .bottom-panel {
+        padding: 10px;
+        gap: 10px;
+      }
+
       .controls-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .weapon-panel {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
       }
 
       .button {
-        min-height: 68px;
-        padding: 12px 10px;
+        min-height: 58px;
+        padding: 10px 8px;
+      }
+
+      .button strong {
+        font-size: 0.88rem;
+      }
+
+      .button span {
+        font-size: 0.67rem;
+      }
+
+      .button.fire {
+        grid-column: 1 / -1;
+        min-height: 54px;
+      }
+
+      .weapon-card {
+        min-height: 58px;
+        padding: 10px;
+      }
+
+      .weapon-card strong {
+        font-size: 0.86rem;
+      }
+
+      .weapon-card span {
+        font-size: 0.65rem;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .value {
+        font-size: 0.86rem;
+      }
+
+      .button strong {
+        font-size: 0.82rem;
+      }
+
+      .button span {
+        font-size: 0.62rem;
       }
     }
   </style>
@@ -355,7 +455,8 @@
       player: null,
       enemy: null,
       lastTime: 0,
-      aiCooldown: 0
+      aiCooldown: 0,
+      tankScale: 1
     };
 
     function getTankTier(level) {
@@ -382,11 +483,11 @@
             trackColor: "#232323",
             metalColor: "#8a8d81",
             markColor: "#f2f0df",
-            width: 108,
-            height: 32,
-            turretLength: 88,
-            turretPivotX: 18,
-            turretPivotY: -46,
+            baseWidth: 108,
+            baseHeight: 32,
+            baseTurretLength: 88,
+            baseTurretPivotX: 18,
+            baseTurretPivotY: -46,
             casemateHeight: 34,
             wheelCount: 6,
             facing: 1,
@@ -400,11 +501,11 @@
             trackColor: "#171717",
             metalColor: "#9d9c92",
             markColor: "#2b2b2b",
-            width: 116,
-            height: 34,
-            turretLength: 96,
-            turretPivotX: -18,
-            turretPivotY: -49,
+            baseWidth: 116,
+            baseHeight: 34,
+            baseTurretLength: 96,
+            baseTurretPivotX: -18,
+            baseTurretPivotY: -49,
             casemateHeight: 40,
             wheelCount: 8,
             facing: -1,
@@ -414,11 +515,11 @@
         kind,
         x,
         y: getTerrainY(x),
-        width: profile.width,
-        height: profile.height,
-        turretLength: profile.turretLength,
-        turretPivotX: profile.turretPivotX,
-        turretPivotY: profile.turretPivotY,
+        width: profile.baseWidth,
+        height: profile.baseHeight,
+        turretLength: profile.baseTurretLength,
+        turretPivotX: profile.baseTurretPivotX,
+        turretPivotY: profile.baseTurretPivotY,
         angle: kind === "player" ? -0.8 : -2.3,
         power: kind === "player" ? 240 : 250,
         health: tier.health,
@@ -429,6 +530,22 @@
         tier,
         profile
       };
+    }
+
+    function getTankScale() {
+      const widthFactor = canvas.width / 960;
+      const heightFactor = canvas.height / 540;
+      const compactBoost = canvas.width < 540 ? 0.84 : 0.95;
+      return Math.max(0.58, Math.min(1, Math.min(widthFactor, heightFactor) * compactBoost + 0.08));
+    }
+
+    function applyTankScale(tank) {
+      const scale = state.tankScale;
+      tank.width = tank.profile.baseWidth * scale;
+      tank.height = tank.profile.baseHeight * scale;
+      tank.turretLength = tank.profile.baseTurretLength * scale;
+      tank.turretPivotX = tank.profile.baseTurretPivotX * scale;
+      tank.turretPivotY = tank.profile.baseTurretPivotY * scale;
     }
 
     function noise(x) {
@@ -467,10 +584,14 @@
 
     function setupLevel(level) {
       buildTerrain(level);
-      const playerX = 90 + level * 12;
-      const enemyX = canvas.width - (92 + level * 14);
+      state.tankScale = getTankScale();
+      const margin = Math.max(54, canvas.width * 0.16);
+      const playerX = margin + level * Math.max(4, canvas.width * 0.006);
+      const enemyX = canvas.width - margin - level * Math.max(4, canvas.width * 0.007);
       state.player = createTank("player", playerX, "#8ee58b", level);
       state.enemy = createTank("enemy", enemyX, "#ff8a65", Math.min(TOTAL_LEVELS, level + 1));
+      applyTankScale(state.player);
+      applyTankScale(state.enemy);
       state.player.y = getTerrainY(state.player.x);
       state.enemy.y = getTerrainY(state.enemy.x);
       state.player.angle = -0.95 + level * 0.015;
@@ -704,7 +825,8 @@
       const player = state.player;
       const moveDir = (state.controls.has("right") ? 1 : 0) - (state.controls.has("left") ? 1 : 0);
       if (moveDir !== 0) {
-        player.x = Math.max(40, Math.min(canvas.width - 40, player.x + moveDir * player.moveSpeed * dt));
+        const edge = player.width * 0.55;
+        player.x = Math.max(edge, Math.min(canvas.width - edge, player.x + moveDir * player.moveSpeed * dt));
         player.y = getTerrainY(player.x);
       }
 
@@ -839,7 +961,7 @@
 
       ctx.fillStyle = "rgba(255,255,255,0.28)";
       ctx.beginPath();
-      ctx.arc(width * 0.8, height * 0.18, 34, 0, Math.PI * 2);
+      ctx.arc(width * 0.8, height * 0.18, Math.max(22, width * 0.06), 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -871,7 +993,7 @@
       ctx.translate(tank.x, baseY);
       ctx.scale(profile.facing, 1);
       ctx.strokeStyle = "rgba(16, 16, 14, 0.9)";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = Math.max(1.2, 2 * state.tankScale);
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
 
@@ -1029,10 +1151,12 @@
       ctx.restore();
 
       const hpRatio = tank.health / tank.maxHealth;
+      const hpWidth = Math.max(42, tank.width * 0.58);
+      const hpHeight = Math.max(5, 8 * state.tankScale);
       ctx.fillStyle = "rgba(0,0,0,0.32)";
-      ctx.fillRect(tank.x - 30, baseY - 28, 60, 8);
+      ctx.fillRect(tank.x - hpWidth / 2, baseY - (30 * state.tankScale), hpWidth, hpHeight);
       ctx.fillStyle = hpRatio > 0.4 ? "#9cf18a" : "#ff8c76";
-      ctx.fillRect(tank.x - 30, baseY - 28, 60 * hpRatio, 8);
+      ctx.fillRect(tank.x - hpWidth / 2, baseY - (30 * state.tankScale), hpWidth * hpRatio, hpHeight);
     }
 
     function drawProjectiles() {
@@ -1040,7 +1164,7 @@
         const weapon = weapons.find((item) => item.id === projectile.weaponId) || weapons[0];
         ctx.fillStyle = weapon.color;
         ctx.beginPath();
-        ctx.arc(projectile.x, projectile.y, 5, 0, Math.PI * 2);
+        ctx.arc(projectile.x, projectile.y, Math.max(3, 5 * state.tankScale), 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -1073,26 +1197,27 @@
         vy += GRAVITY * 0.07;
         if (y >= getTerrainY(x)) break;
         ctx.beginPath();
-        ctx.arc(x, y, 2.2, 0, Math.PI * 2);
+        ctx.arc(x, y, Math.max(1.4, 2.2 * state.tankScale), 0, Math.PI * 2);
         ctx.fill();
       }
     }
 
     function drawPowerGauge() {
-      const panelWidth = 180;
-      const x = 20;
-      const y = 20;
+      const panelWidth = Math.min(canvas.width * 0.48, 180);
+      const x = Math.max(14, canvas.width * 0.05);
+      const y = Math.max(14, canvas.height * 0.05);
+      const fontSize = canvas.width < 540 ? 12 : 14;
       const ratio = (state.player.power - POWER_MIN) / (POWER_MAX - POWER_MIN);
       ctx.fillStyle = "rgba(26,22,32,0.52)";
-      ctx.fillRect(x, y, panelWidth, 16);
+      ctx.fillRect(x, y, panelWidth, 14);
       ctx.fillStyle = "#ffcb73";
-      ctx.fillRect(x, y, panelWidth * ratio, 16);
+      ctx.fillRect(x, y, panelWidth * ratio, 14);
       ctx.strokeStyle = "rgba(255,255,255,0.4)";
-      ctx.strokeRect(x, y, panelWidth, 16);
+      ctx.strokeRect(x, y, panelWidth, 14);
       ctx.fillStyle = "#fff6e9";
-      ctx.font = "bold 14px Trebuchet MS";
-      ctx.fillText(`Kraft ${Math.round(state.player.power)}`, x, y + 34);
-      ctx.fillText(`Vinkel ${Math.round((-state.player.angle * 180) / Math.PI)}°`, x, y + 54);
+      ctx.font = `bold ${fontSize}px Trebuchet MS`;
+      ctx.fillText(`Kraft ${Math.round(state.player.power)}`, x, y + 28);
+      ctx.fillText(`Vinkel ${Math.round((-state.player.angle * 180) / Math.PI)}°`, x, y + 46);
     }
 
     function update(dt) {
